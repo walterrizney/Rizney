@@ -16,16 +16,17 @@
     const style = document.createElement("style");
     style.id = "rizney-animal-styles";
     style.textContent = `
-      #song-list .song { grid-template-columns:38px minmax(0,1fr) 42px; }
-      #song-list .song .play { grid-column:3; grid-row:1; align-self:stretch; width:42px; min-height:42px; height:42px; aspect-ratio:1; padding:3px; display:grid; place-items:center; overflow:hidden; }
+      #song-list .song { grid-template-columns:38px minmax(0,1fr) 52px; }
+      #song-list .song .play { grid-column:3; grid-row:1; align-self:stretch; justify-self:end; width:52px; height:52px; min-height:52px; aspect-ratio:1; padding:3px; display:grid; place-items:center; overflow:hidden; background:#000; border:1px solid var(--gold); border-radius:8px; }
+      #song-list .song .play:hover { background:#090909; }
       #song-list .song .play img { display:block; width:100%; height:100%; object-fit:contain; pointer-events:none; }
       #cards .card { background:#000; }
       #cards .card .symbol { height:96px; display:grid; place-items:center; font-size:0; }
       #cards .card .symbol img { width:96px; height:96px; object-fit:contain; display:block; }
       #cards .card .animal-name { display:block; margin:0 0 8px; color:var(--bright-gold); font-family:sans-serif; font-size:.78rem; overflow-wrap:anywhere; text-transform:capitalize; }
       @media(max-width:500px){
-        #song-list .song { grid-template-columns:30px minmax(0,1fr) 38px; }
-        #song-list .song .play { width:38px; min-height:38px; height:38px; }
+        #song-list .song { grid-template-columns:30px minmax(0,1fr) 46px; }
+        #song-list .song .play { width:46px; height:46px; min-height:46px; }
       }
     `;
     document.head.appendChild(style);
@@ -71,7 +72,6 @@
     const cardsButton = $("#draw-cards");
     const reading = $("#reading");
     if (cardsButton && reading) {
-      // Capture runs before index.html's onclick, allowing a reliable toggle.
       cardsButton.addEventListener("click", () => {
         const wasOpen = !reading.hidden;
         setTimeout(() => {
