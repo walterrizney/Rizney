@@ -1,4 +1,4 @@
-/* Animal playlist controls, header enhancements, CARDS menu, and Whack-a-Track. */
+/* Header adjustments, animal visuals, and Whack-a-Track. */
 (() => {
   "use strict";
   const $ = (s, r = document) => r.querySelector(s);
@@ -19,14 +19,17 @@
     let context = top.querySelector(".context-link");
     if (!context) { context = document.createElement("a"); context.className = "context-link"; context.href = "./context.html"; context.textContent = "CONTEXT"; top.appendChild(context); }
     if (!$("#rizney-header-styles")) {
-      const style = document.createElement("style"); style.id = "rizney-header-styles"; style.textContent = `
-        .top-area{min-height:58px;padding:8px 14px 10px!important;text-align:center}
-        .top-area .donate,.top-area .context-link{top:10px;z-index:2;border:1px solid var(--gold);border-radius:999px;padding:5px 9px;color:var(--bright-gold);background:#160c1a;font:inherit;font-size:.68rem;text-decoration:none}
+      const style = document.createElement("style");
+      style.id = "rizney-header-styles";
+      style.textContent = `
+        .top-area{min-height:78px!important;padding:12px 14px 14px!important;text-align:center}
+        .top-area .donate,.top-area .context-link{top:14px;z-index:2;border:1px solid var(--gold);border-radius:999px;padding:5px 9px;color:var(--bright-gold);background:#160c1a;font:inherit;font-size:.68rem;text-decoration:none}
         .top-area .donate{left:10px}.top-area .context-link{left:50%;transform:translateX(-50%)}
-        .top-area .rizney-logo{position:absolute;top:5px;right:10px;width:50px;height:50px;object-fit:contain}
+        .top-area .rizney-logo{position:absolute;top:6px;right:10px;width:66px;height:66px;object-fit:contain}
         .top-area .context-link:hover,.top-area .donate:hover{background:#55208a}
-        @media(max-width:500px){.top-area{min-height:50px;padding:6px 8px 8px!important}.top-area .donate{top:8px;left:8px}.top-area .context-link{top:8px}.top-area .rizney-logo{top:3px;right:8px;width:44px;height:44px}}
-      `; document.head.appendChild(style);
+        @media(max-width:500px){.top-area{min-height:68px!important;padding:10px 8px 12px!important}.top-area .donate,.top-area .context-link{top:12px}.top-area .donate{left:8px}.top-area .rizney-logo{top:4px;right:8px;width:58px;height:58px}}
+      `;
+      document.head.appendChild(style);
     }
   }
 
@@ -42,9 +45,9 @@
       @media(max-width:500px){#song-list .song{grid-template-columns:30px minmax(0,1fr) 46px}#song-list .song .play{width:46px;height:46px;min-height:46px}}
     `; document.head.appendChild(style);
   }
-  function paintSongs(){document.querySelectorAll("#song-list .song").forEach((row,index)=>{const button=row.querySelector("button.play");if(!button||button.dataset.animalPainted==="true")return;const name=labelFor(animal(index));const image=document.createElement("img");image.src=imageFor(index);image.alt=`Play song ${index+1}: ${name}`;image.title=name;image.loading="lazy";button.replaceChildren(image);button.setAttribute("aria-label",image.alt);button.title=name;button.dataset.animalPainted="true";});}
-  function paintCards(){const cards=$("#cards");if(!cards)return;cards.querySelectorAll(".card").forEach((card,position)=>{const link=card.querySelector("a"),match=link?.textContent.match(/Play song\s+(\d+)/i),index=match?Number(match[1])-1:Number(card.dataset.songIndex??position),name=labelFor(animal(index));card.querySelector("strong")?.remove();const symbol=card.querySelector(".symbol");if(symbol&&!symbol.querySelector("img")){const image=document.createElement("img");image.src=imageFor(index);image.alt=name;image.title=name;image.loading="lazy";symbol.replaceChildren(image);}let label=card.querySelector(".animal-name");if(!label&&link){label=document.createElement("span");label.className="animal-name";link.before(label)}if(label)label.textContent=name;card.dataset.songIndex=String(index);});}
-  function bindVisuals(){addHeader();addStyles();paintSongs();const list=$("#song-list");if(list)new MutationObserver(paintSongs).observe(list,{childList:true,subtree:true});const cardsButton=$("#draw-cards"),reading=$("#reading");if(cardsButton&&reading)cardsButton.addEventListener("click",()=>setTimeout(()=>{if(!reading.hidden)paintCards()},0),true);}
+  function paintSongs(){document.querySelectorAll("#song-list .song").forEach((row,index)=>{const button=row.querySelector("button.play");if(!button||button.dataset.animalPainted==="true")return;const name=labelFor(animal(index));const image=document.createElement("img");image.src=imageFor(index);image.alt=`Play song ${index+1}: ${name}`;image.title=name;image.loading="lazy";button.replaceChildren(image);button.setAttribute("aria-label",image.alt);button.title=name;button.dataset.animalPainted="true"})}
+  function paintCards(){const cards=$("#cards");if(!cards)return;cards.querySelectorAll(".card").forEach((card,position)=>{const link=card.querySelector("a"),match=link?.textContent.match(/Play song\s+(\d+)/i),index=match?Number(match[1])-1:Number(card.dataset.songIndex??position),name=labelFor(animal(index));card.querySelector("strong")?.remove();const symbol=card.querySelector(".symbol");if(symbol&&!symbol.querySelector("img")){const image=document.createElement("img");image.src=imageFor(index);image.alt=name;image.title=name;image.loading="lazy";symbol.replaceChildren(image)}let label=card.querySelector(".animal-name");if(!label&&link){label=document.createElement("span");label.className="animal-name";link.before(label)}if(label)label.textContent=name;card.dataset.songIndex=String(index)})}
+  function bindVisuals(){addHeader();addStyles();paintSongs();const list=$("#song-list");if(list)new MutationObserver(paintSongs).observe(list,{childList:true,subtree:true});const cardsButton=$("#draw-cards"),reading=$("#reading");if(cardsButton&&reading)cardsButton.addEventListener("click",()=>setTimeout(()=>{if(!reading.hidden)paintCards()},0),true)}
   let game=null,active=false,health=24,seconds=80,moleTimer,hideTimer,gameTimer;
   const setToolbarHidden=(hidden)=>controls()?.classList.toggle("toolbar-hidden",hidden);
   const isPlaying=()=>{const p=player();return Boolean(p&&window.YT?.PlayerState&&p.getPlayerState?.()===window.YT.PlayerState.PLAYING)};
