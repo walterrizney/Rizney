@@ -1,11 +1,13 @@
-/* Optional visual enhancements and Whack-a-Track. */
+/* Visual enhancements, animal play buttons, cards, and Whack-a-Track. */
 (() => {
   "use strict";
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const controls = () => $(".controls");
   const player = () => window.rizneyPlayer || window.player || null;
-  const icons = [
+
+  // Keep this order stable: song 1 uses aardvark.png, song 2 uses alligator.png, etc.
+  const animals = [
     "aardvark", "alligator", "anglefish", "ant", "anteater", "armadillo", "baboon", "badger",
     "bald-eagle", "bass", "bat", "bear", "beaver", "bee", "blob-fish", "blue-heron", "boar",
     "buffalo", "butterfly", "camel", "capybara", "chameleon", "cheetah", "chihuahua", "chimpanzee",
@@ -19,21 +21,22 @@
     "sloth", "snail", "snake", "spider", "squid", "squirrel", "swan", "t-rex", "tapir", "toucan", "unicorn",
     "vulture", "walrus", "warthog", "weasel", "whale", "wolf", "wombat", "woodpecker", "yak", "zebra"
   ];
-  const animalName = (index) => icons[index % icons.length];
-  const animalSrc = (index) => `assets/animal-icons/${encodeURIComponent(animalName(index))}.png`;
 
-  function addVisualStyles() {
-    if ($("#rizney-visual-styles")) return;
+  const animalFor = (index) => animals[index % animals.length];
+  const iconFor = (index) => `assets/animal-icons/${encodeURIComponent(animalFor(index))}.png`;
+
+  function addStyles() {
+    if ($("#rizney-animal-styles")) return;
     const style = document.createElement("style");
-    style.id = "rizney-visual-styles";
+    style.id = "rizney-animal-styles";
     style.textContent = `
       #song-list .song { grid-template-columns:42px 38px minmax(0,1fr); }
       #song-list .song .play { width:42px; height:42px; padding:3px; display:grid; place-items:center; overflow:hidden; }
-      #song-list .song .play img { display:block; width:100%; height:100%; object-fit:contain; pointer-events:none; }
+      #song-list .song .play img { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; }
       #cards .card { background:#000; }
       #cards .card .symbol { height:96px; display:grid; place-items:center; font-size:0; }
       #cards .card .symbol img { width:96px; height:96px; object-fit:contain; display:block; }
-      #cards .card .animal-name { display:block; margin:0 0 8px; color:var(--bright-gold); font-family:sans-serif; font-size:.78rem; overflow-wrap:anywhere; }
+      #cards .card .animal-name { display:block; margin:0 0 8px; color:var(--bright-gold); font-family:sans-serif; font-size:.78rem; overflow-wrap:anywhere; text-transform:capitalize; }
       @media(max-width:500px){
         #song-list .song { grid-template-columns:38px 30px minmax(0,1fr); }
         #song-list .song .play { width:38px; height:38px; }
@@ -42,21 +45,23 @@
     document.head.appendChild(style);
   }
 
-  // Replace each chronological row's text Play button with its matching
-  // animal icon. The existing click listener remains attached to the button.
+  function displayName(name) {
+    return name.replace(/\s*\(2\)$/, "").replace(/-/g, " ");
+  }
+
   function paintSongs() {
     document.querySelectorAll("#song-list .song").forEach((row, index) => {
       const button = row.querySelector("button.play");
       if (!button || button.dataset.animalPainted === "true") return;
-      const name = animalName(index);
+      const animal = animalFor(index);
       const image = document.createElement("img");
-      image.src = animalSrc(index);
-      image.alt = `Play song ${index + 1}: ${name}`;
-      image.title = name;
+      image.src = iconFor(index);
+      image.alt = `Play song ${index + 1}: ${displayName(animal)}`;
+      image.title = displayName(animal);
       image.loading = "lazy";
       button.replaceChildren(image);
       button.setAttribute("aria-label", image.alt);
-      button.title = image.alt;
+      button.title = image.title;
       button.dataset.animalPainted = "true";
     });
   }
@@ -68,30 +73,34 @@
       const link = card.querySelector("a");
       const match = link?.textContent.match(/Play song\s+(\d+)/i);
       const index = match ? Number(match[1]) - 1 : Number(card.dataset.songIndex ?? position);
-      const name = animalName(index);
+      const animal = animalFor(index);
       const symbol = card.querySelector(".symbol");
       if (symbol && !symbol.querySelector("img")) {
         const image = document.createElement("img");
-        image.src = animalSrc(index); image.alt = name; image.title = name; image.loading = "lazy";
+        image.src = iconFor(index);
+        image.alt = displayName(animal);
+        image.title = displayName(animal);
+        image.loading = "lazy";
         symbol.replaceChildren(image);
       }
       let label = card.querySelector(".animal-name");
-      if (!label && link) { label = document.createElement("span"); label.className = "animal-name"; link.before(label); }
-      if (label) label.textContent = name;
+      if (!label && link) {
+        label = document.createElement("span");
+        label.className = "animal-name";
+        link.before(label);
+      }
+      if (label) label.textContent = displayName(animal);
       card.dataset.songIndex = String(index);
     });
   }
 
   function bindVisuals() {
-    addVisualStyles();
+    addStyles();
     paintSongs();
     const list = $("#song-list");
     if (list) new MutationObserver(paintSongs).observe(list, { childList: true, subtree: true });
-    const button = $("#draw-cards");
-    if (button && button.dataset.cardVisualsBound !== "true") {
-      button.dataset.cardVisualsBound = "true";
-      button.addEventListener("click", () => window.setTimeout(paintCards, 0));
-    }
+    const cardsButton = $("#draw-cards");
+    if (cardsButton) cardsButton.addEventListener("click", () => setTimeout(paintCards, 0));
   }
 
   let game = null;
@@ -111,7 +120,8 @@
   function createGame() {
     if (game) return game;
     const panel = document.createElement("section");
-    panel.id = "whack-a-track-game"; panel.hidden = true;
+    panel.id = "whack-a-track-game";
+    panel.hidden = true;
     panel.innerHTML = `<h2>Whack-a-Track</h2><p id="wat-status" aria-live="polite"></p><p>Time: <span id="wat-time">80</span>s &nbsp; Track health: <span id="wat-health">24</span></p><div id="wat-board" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:420px;margin:12px auto"></div><button id="wat-close" type="button">Close game</button>`;
     Object.assign(panel.style, { maxWidth: "min(92vw, 620px)", margin: "8px auto 18px", padding: "10px 14px 14px", textAlign: "center", background: "#120b18", border: "2px solid #d4af37", borderRadius: "12px" });
     const board = $("#wat-board", panel);
