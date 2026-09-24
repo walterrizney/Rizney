@@ -25,7 +25,8 @@
     main{width:min(100% - 24px,900px);margin:auto;padding:18px 0 50px}
     .intro{color:var(--muted);text-align:center;line-height:1.45}
     h2{color:var(--bright-gold);font-size:1.25rem;border-bottom:1px solid var(--gold);padding-bottom:8px}
-    #cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0 22px}
+    #reading{display:block}
+    #cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0 22px;width:min(100%, 620px);margin-inline:auto}
     .card{min-height:150px;padding:9px 6px;color:var(--bright-purple);background:linear-gradient(145deg,#21102e,#090509);border:2px solid var(--gold);border-radius:12px;text-align:center}
     .card .symbol{display:block;color:var(--bright-gold);font-size:1.7rem;margin-bottom:6px}
     .card strong{display:block;margin-bottom:8px}
@@ -43,8 +44,11 @@
       .controls{gap:6px}
       button{font-size:.75rem;padding:8px 10px}
       .skip{width:38px;height:34px}
-      #cards{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .card{min-height:130px}
+      #reading{margin-top:4px}
+      #cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0 14px;width:100%}
+      .card{min-height:118px;padding:8px 6px}
+      .card .symbol{font-size:1.3rem;margin-bottom:4px}
+      .card strong{margin-bottom:4px}
       .song{grid-template-columns:30px 1fr auto}
       .song-title{font-size:.82rem}
     }
@@ -54,7 +58,7 @@
 <body>
   <section class="top-area"><a class="donate" href="https://venmo.com/u/YOUR_VENMO_USERNAME" target="_blank" rel="noopener">♥ Donate</a><h1>✦ WALT RIZNEY ✦</h1><div class="tagline">Mix'N'Mojo</div></section>
   <section class="player-dock"><div class="player-wrap"><div id="player"></div></div><div id="now-playing">Now playing: MEGA MIX'N'MOJO Intro</div></section>
-  <nav class="controls" aria-label="Music controls"><button id="previous-song" class="skip" type="button" aria-label="Previous song">«</button><button id="random-song" type="button">Random</button><button id="whack-track" type="button">Whack-A-Track</button><button id="draw-cards" type="button">Cards</button><button id="next-song" class="skip" type="button" aria-label="Next song">»</button></nav>
+  <nav class="controls" aria-label="Music controls"><button id="previous-song" class="skip" type="button" aria-label="Previous song">«</button><button id="random-song" type="button">Random</button><button id="whack-track" type="button">Whack-A-Track</button><button id="draw-cards" type="button" aria-expanded="false">Cards</button><button id="next-song" class="skip" type="button" aria-label="Next song">»</button></nav>
   <main><p class="intro">Browse the collection in order, or let the cards choose a song for you.</p><section id="reading" hidden><h2>Your Music Reading</h2><div id="cards"></div></section><section><h2>Chronological</h2><div id="song-list"></div></section></main>
 
   <script src="https://www.youtube.com/iframe_api"></script>
@@ -256,6 +260,7 @@
     let cardPlaylist = null;
     let cardPosition = 0;
     let queuedIndex = null;
+    let cardsOpen = false;
 
     const titleFor = (i) => `Song ${i + 1}`;
 
@@ -376,10 +381,30 @@
     const drawCardsButton = $('#draw-cards');
     if (drawCardsButton) {
       drawCardsButton.onclick = () => {
-        cardPlaylist = [...ids.keys()].sort(() => Math.random() - 0.5).slice(0, Math.min(6, ids.length));
+        if (cardsOpen) {
+          cardsOpen = false;
+          drawCardsButton.setAttribute('aria-expanded', 'false');
+          reading.hidden = true;
+          cards.innerHTML = '';
+          cardPlaylist = null;
+          cardPosition = 0;
+          updateButtons();
+          const playerDock = $('.player-dock');
+          if (playerDock) {
+            playerDock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+          return;
+        }
+
+        cardsOpen = true;
+        drawCardsButton.setAttribute('aria-expanded', 'true');
+        if (cardPlaylist === null) {
+          cardPlaylist = [...ids.keys()].sort(() => Math.random() - 0.5).slice(0, Math.min(6, ids.length));
+        }
         cardPosition = 0;
         reading.hidden = false;
         cards.innerHTML = '';
+
         const symbols = ['✦', '✧', '✩', '✷', '✹', '✺'];
         cardPlaylist.forEach((songIndex, position) => {
           const card = document.createElement('article');
@@ -391,6 +416,14 @@
           });
           cards.appendChild(card);
         });
+
+        requestAnimationFrame(() => {
+          const firstCard = cards.querySelector('.card');
+          if (firstCard) {
+            firstCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+
         updateButtons();
       };
     }
