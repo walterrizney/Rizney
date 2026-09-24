@@ -22,22 +22,45 @@
   const animalName = (index) => icons[index % icons.length];
   const animalSrc = (index) => `assets/animal-icons/${encodeURIComponent(animalName(index))}.png`;
 
-  function addCardStyles() {
-    if ($("#rizney-card-styles")) return;
+  function addVisualStyles() {
+    if ($("#rizney-visual-styles")) return;
     const style = document.createElement("style");
-    style.id = "rizney-card-styles";
+    style.id = "rizney-visual-styles";
     style.textContent = `
+      #song-list .song { grid-template-columns:42px 38px minmax(0,1fr); }
+      #song-list .song .play { width:42px; height:42px; padding:3px; display:grid; place-items:center; overflow:hidden; }
+      #song-list .song .play img { display:block; width:100%; height:100%; object-fit:contain; pointer-events:none; }
       #cards .card { background:#000; }
       #cards .card .symbol { height:96px; display:grid; place-items:center; font-size:0; }
       #cards .card .symbol img { width:96px; height:96px; object-fit:contain; display:block; }
       #cards .card .animal-name { display:block; margin:0 0 8px; color:var(--bright-gold); font-family:sans-serif; font-size:.78rem; overflow-wrap:anywhere; }
+      @media(max-width:500px){
+        #song-list .song { grid-template-columns:38px 30px minmax(0,1fr); }
+        #song-list .song .play { width:38px; height:38px; }
+      }
     `;
     document.head.appendChild(style);
   }
 
-  // Decorate cards after the CARDS handler has finished creating them. This is
-  // deliberately a one-shot pass; observing #cards while replacing images
-  // causes an infinite MutationObserver loop and makes the toolbar appear frozen.
+  // Replace each chronological row's text Play button with its matching
+  // animal icon. The existing click listener remains attached to the button.
+  function paintSongs() {
+    document.querySelectorAll("#song-list .song").forEach((row, index) => {
+      const button = row.querySelector("button.play");
+      if (!button || button.dataset.animalPainted === "true") return;
+      const name = animalName(index);
+      const image = document.createElement("img");
+      image.src = animalSrc(index);
+      image.alt = `Play song ${index + 1}: ${name}`;
+      image.title = name;
+      image.loading = "lazy";
+      button.replaceChildren(image);
+      button.setAttribute("aria-label", image.alt);
+      button.title = image.alt;
+      button.dataset.animalPainted = "true";
+    });
+  }
+
   function paintCards() {
     const cards = $("#cards");
     if (!cards) return;
@@ -49,33 +72,26 @@
       const symbol = card.querySelector(".symbol");
       if (symbol && !symbol.querySelector("img")) {
         const image = document.createElement("img");
-        image.src = animalSrc(index);
-        image.alt = name;
-        image.title = name;
-        image.loading = "lazy";
+        image.src = animalSrc(index); image.alt = name; image.title = name; image.loading = "lazy";
         symbol.replaceChildren(image);
       }
       let label = card.querySelector(".animal-name");
-      if (!label && link) {
-        label = document.createElement("span");
-        label.className = "animal-name";
-        link.before(label);
-      }
+      if (!label && link) { label = document.createElement("span"); label.className = "animal-name"; link.before(label); }
       if (label) label.textContent = name;
       card.dataset.songIndex = String(index);
     });
   }
 
-  function bindCardVisuals() {
-    addCardStyles();
+  function bindVisuals() {
+    addVisualStyles();
+    paintSongs();
+    const list = $("#song-list");
+    if (list) new MutationObserver(paintSongs).observe(list, { childList: true, subtree: true });
     const button = $("#draw-cards");
-    if (!button || button.dataset.cardVisualsBound === "true") return;
-    button.dataset.cardVisualsBound = "true";
-    button.addEventListener("click", () => {
-      // Let index.html create the six cards first, then decorate them without
-      // replacing its click handlers or blocking the other controls.
-      window.setTimeout(paintCards, 0);
-    });
+    if (button && button.dataset.cardVisualsBound !== "true") {
+      button.dataset.cardVisualsBound = "true";
+      button.addEventListener("click", () => window.setTimeout(paintCards, 0));
+    }
   }
 
   let game = null;
@@ -86,41 +102,23 @@
   let hideTimer;
   let gameTimer;
 
-  function setToolbarHidden(hidden) {
-    controls()?.classList.toggle("toolbar-hidden", hidden);
-  }
-
+  function setToolbarHidden(hidden) { controls()?.classList.toggle("toolbar-hidden", hidden); }
   function isPlaying() {
     const currentPlayer = player();
-    return Boolean(
-      currentPlayer && window.YT && window.YT.PlayerState &&
-      typeof currentPlayer.getPlayerState === "function" &&
-      currentPlayer.getPlayerState() === window.YT.PlayerState.PLAYING
-    );
+    return Boolean(currentPlayer && window.YT && window.YT.PlayerState && typeof currentPlayer.getPlayerState === "function" && currentPlayer.getPlayerState() === window.YT.PlayerState.PLAYING);
   }
 
   function createGame() {
     if (game) return game;
     const panel = document.createElement("section");
-    panel.id = "whack-a-track-game";
-    panel.hidden = true;
-    panel.innerHTML = `
-      <h2>Whack-a-Track</h2>
-      <p id="wat-status" aria-live="polite"></p>
-      <p>Time: <span id="wat-time">80</span>s &nbsp; Track health: <span id="wat-health">24</span></p>
-      <div id="wat-board" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:420px;margin:12px auto"></div>
-      <button id="wat-close" type="button">Close game</button>
-    `;
+    panel.id = "whack-a-track-game"; panel.hidden = true;
+    panel.innerHTML = `<h2>Whack-a-Track</h2><p id="wat-status" aria-live="polite"></p><p>Time: <span id="wat-time">80</span>s &nbsp; Track health: <span id="wat-health">24</span></p><div id="wat-board" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:420px;margin:12px auto"></div><button id="wat-close" type="button">Close game</button>`;
     Object.assign(panel.style, { maxWidth: "min(92vw, 620px)", margin: "8px auto 18px", padding: "10px 14px 14px", textAlign: "center", background: "#120b18", border: "2px solid #d4af37", borderRadius: "12px" });
     const board = $("#wat-board", panel);
     for (let i = 0; i < 6; i += 1) {
       const hole = document.createElement("button");
       hole.type = "button"; hole.className = "wat-hole"; hole.textContent = "🕳️"; hole.dataset.active = "false"; hole.style.minHeight = "76px";
-      hole.addEventListener("click", () => {
-        if (!active || hole.dataset.active !== "true") return;
-        health -= 1; $("#wat-health", panel).textContent = String(health); hideMoles();
-        if (health <= 0) finish(true);
-      });
+      hole.addEventListener("click", () => { if (!active || hole.dataset.active !== "true") return; health -= 1; $("#wat-health", panel).textContent = String(health); hideMoles(); if (health <= 0) finish(true); });
       board.appendChild(hole);
     }
     $("#wat-close", panel).addEventListener("click", closeGame);
@@ -129,52 +127,23 @@
     return game;
   }
 
-  function hideMoles() {
-    if (!game) return;
-    game.board.querySelectorAll(".wat-hole").forEach((hole) => { hole.dataset.active = "false"; hole.textContent = "🕳️"; });
-  }
-
+  function hideMoles() { if (game) game.board.querySelectorAll(".wat-hole").forEach((hole) => { hole.dataset.active = "false"; hole.textContent = "🕳️"; }); }
   function spawnMole() {
     if (!active || !game) return;
-    const holes = [...game.board.children];
-    const hole = holes[Math.floor(Math.random() * holes.length)];
-    hideMoles(); hole.dataset.active = "true"; hole.textContent = "🐭";
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => {
-      if (hole.dataset.active !== "true") return;
-      health -= 1; $("#wat-health", game.panel).textContent = String(health); hole.dataset.active = "false"; hole.textContent = "🕳️";
-      if (health <= 0) finish(false);
-    }, 460);
+    const hole = [...game.board.children][Math.floor(Math.random() * game.board.children.length)];
+    hideMoles(); hole.dataset.active = "true"; hole.textContent = "🐭"; clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => { if (hole.dataset.active !== "true") return; health -= 1; $("#wat-health", game.panel).textContent = String(health); hole.dataset.active = "false"; hole.textContent = "🕳️"; if (health <= 0) finish(false); }, 460);
   }
-
-  function finish(won) {
-    active = false; clearTimeout(moleTimer); clearTimeout(hideTimer); clearInterval(gameTimer); hideMoles();
-    if (game) game.status.textContent = won ? "💥 TRACK WHACKED!" : "The track survived. Try again.";
-    setToolbarHidden(false);
-  }
-
-  function closeGame() {
-    active = false; clearTimeout(moleTimer); clearTimeout(hideTimer); clearInterval(gameTimer);
-    if (game) game.panel.hidden = true;
-    setToolbarHidden(false);
-  }
-
+  function finish(won) { active = false; clearTimeout(moleTimer); clearTimeout(hideTimer); clearInterval(gameTimer); hideMoles(); if (game) game.status.textContent = won ? "💥 TRACK WHACKED!" : "The track survived. Try again."; setToolbarHidden(false); }
+  function closeGame() { active = false; clearTimeout(moleTimer); clearTimeout(hideTimer); clearInterval(gameTimer); if (game) game.panel.hidden = true; setToolbarHidden(false); }
   function startGame(event) {
     event.preventDefault(); event.stopPropagation();
-    const currentGame = createGame(); currentGame.panel.hidden = false; setToolbarHidden(true);
-    health = 24; seconds = 80; active = true;
-    $("#wat-health", currentGame.panel).textContent = String(health); $("#wat-time", currentGame.panel).textContent = String(seconds);
-    currentGame.status.textContent = isPlaying() ? "Whack the mice before they damage the track!" : "Play a track first, then start again.";
+    const currentGame = createGame(); currentGame.panel.hidden = false; setToolbarHidden(true); health = 24; seconds = 80; active = true;
+    $("#wat-health", currentGame.panel).textContent = String(health); $("#wat-time", currentGame.panel).textContent = String(seconds); currentGame.status.textContent = isPlaying() ? "Whack the mice before they damage the track!" : "Play a track first, then start again.";
     if (!isPlaying()) { active = false; setToolbarHidden(false); return; }
-    spawnMole(); moleTimer = setInterval(spawnMole, 1400);
-    gameTimer = setInterval(() => { seconds -= 1; $("#wat-time", currentGame.panel).textContent = String(seconds); if (seconds <= 0) finish(true); }, 1000);
+    spawnMole(); moleTimer = setInterval(spawnMole, 1400); gameTimer = setInterval(() => { seconds -= 1; $("#wat-time", currentGame.panel).textContent = String(seconds); if (seconds <= 0) finish(true); }, 1000);
   }
 
-  function init() {
-    bindCardVisuals();
-    $("#whack-track")?.addEventListener("click", startGame);
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
-  else init();
+  function init() { bindVisuals(); $("#whack-track")?.addEventListener("click", startGame); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true }); else init();
 })();
