@@ -264,6 +264,18 @@
 
     const titleFor = (i) => `Song ${i + 1}`;
 
+    function scrollToReadingCards() {
+      const firstCard = cards.querySelector('.card');
+      if (!firstCard) return;
+      const stickyPlayer = document.querySelector('.player-dock');
+      const toolbar = document.querySelector('.controls');
+      const stickyHeight = stickyPlayer ? stickyPlayer.offsetHeight : 0;
+      const toolbarHeight = toolbar ? toolbar.offsetHeight : 0;
+      const padding = 12;
+      const top = firstCard.getBoundingClientRect().top + window.scrollY - stickyHeight - toolbarHeight - padding;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+
     function updateButtons() {
       if (!previousButton || !nextButton) return;
       previousButton.disabled = cardPlaylist === null ? currentIndex <= 0 : cardPosition <= 0;
@@ -418,10 +430,7 @@
         });
 
         requestAnimationFrame(() => {
-          const firstCard = cards.querySelector('.card');
-          if (firstCard) {
-            firstCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
+          scrollToReadingCards();
         });
 
         updateButtons();
