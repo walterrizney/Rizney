@@ -1,4 +1,3 @@
-/* Header and footer adjustments, animal visuals, and Whack-a-Track. */
 (() => {
   "use strict";
   const $ = (s, r = document) => r.querySelector(s);
@@ -40,13 +39,19 @@
       #song-list .song .play{grid-column:3;grid-row:1;align-self:stretch;justify-self:end;width:52px;height:52px;min-height:52px;padding:3px;display:grid;place-items:center;overflow:hidden;background:transparent;border:0}
       #song-list .song .play img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
       #cards .card{background:#000}.card .symbol{height:96px;display:grid;place-items:center;font-size:0}.card .symbol img{width:96px;height:96px;object-fit:contain;display:block}.card .animal-name{display:block;margin:0 0 8px;color:var(--bright-gold);font-family:sans-serif;font-size:.78rem;text-transform:capitalize}
-      #whack-a-track-game{display:block;position:relative;z-index:99;width:min(100%,620px);margin:0 auto 18px;padding:12px 14px 18px;text-align:center;background:#120b18;border:2px solid var(--gold);border-top:0;border-radius:0 0 12px 12px}
-      #whack-a-track-game[hidden]{display:none!important}.wat-board{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:480px;margin:14px auto}.wat-hole{min-height:110px;padding:8px;font-size:2.6rem;line-height:1;border:2px solid var(--gold);border-radius:10px;background:#000;color:#fff;cursor:pointer}.wat-hole:hover{background:#21102e}
-      @media(max-width:500px){#song-list .song{grid-template-columns:30px minmax(0,1fr) 46px}#song-list .song .play{width:46px;height:46px;min-height:46px}.wat-board{gap:8px}.wat-hole{min-height:86px;font-size:2.1rem}}
+      #whack-a-track-game{position:fixed;top:var(--whack-toolbar-bottom,0px);left:50%;transform:translateX(-50%);z-index:99;display:block;width:min(calc(100vw - 16px),620px);max-height:calc(100vh - var(--whack-toolbar-bottom,0px) - 8px);margin:0;padding:10px 14px 14px;box-sizing:border-box;overflow:hidden;text-align:center;background:#120b18;border:2px solid var(--gold);border-radius:0 0 12px 12px;box-shadow:0 8px 20px rgba(0,0,0,.35)}
+      #whack-a-track-game[hidden]{display:none!important}
+      #whack-a-track-game h2{margin:0 0 4px;padding-bottom:4px}
+      #whack-a-track-game #wat-status{margin:4px 0}
+      .wat-board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:500px;margin:8px auto 0;padding:10px;border:2px solid var(--gold);border-radius:10px;box-sizing:border-box;background:#000}
+      .wat-hole{min-height:clamp(58px,14vh,106px);padding:6px;font-size:clamp(1.8rem,6vw,2.8rem);line-height:1;border:2px solid var(--gold);border-radius:10px;background:#090509;color:#fff;cursor:pointer}
+      .wat-hole:hover{background:#21102e}
+      @media(max-width:500px){#song-list .song{grid-template-columns:30px minmax(0,1fr) 46px}#song-list .song .play{width:46px;height:46px;min-height:46px}.wat-board{gap:6px;padding:7px;margin-top:6px}.wat-hole{min-height:clamp(52px,13vh,82px);font-size:clamp(1.6rem,9vw,2.2rem)}}
     `; document.head.appendChild(style);
   }
 
   function syncPlayerHeight() { const dock = $(".player-dock"); if (dock) document.documentElement.style.setProperty("--rizney-player-height", `${dock.getBoundingClientRect().height}px`); }
+  function syncGamePosition() { const bar = controls(); if (bar) document.documentElement.style.setProperty("--whack-toolbar-bottom", `${Math.max(0, bar.getBoundingClientRect().bottom)}px`); }
   function paintSongs() { document.querySelectorAll("#song-list .song").forEach((row, i) => { const button = $("button.play", row); if (!button || button.dataset.animalPainted) return; const img = document.createElement("img"); img.src = imageFor(i); img.alt = labelFor(animal(i)); img.title = labelFor(animal(i)); img.loading = "lazy"; button.replaceChildren(img); button.dataset.animalPainted = "true"; }); }
   function paintCards() { $("#cards")?.querySelectorAll(".card").forEach((card, i) => { const link = $("a", card); const match = link?.textContent.match(/Play song\s+(\d+)/i); const index = match ? Number(match[1]) - 1 : i; const name = labelFor(animal(index)); const symbol = $(".symbol", card); if (symbol && !$("img", symbol)) { const img = document.createElement("img"); img.src = imageFor(index); img.alt = name; img.title = name; img.loading = "lazy"; symbol.replaceChildren(img); } if (link && !$(".animal-name", card)) { const label = document.createElement("span"); label.className = "animal-name"; label.textContent = name; link.before(label); } }); }
 
@@ -56,47 +61,8 @@
   function finish(won) { active = false; clearTimeout(moleTimer); clearInterval(gameTimer); hideMoles(); if (game) game.status.textContent = won ? "💥 TRACK WHACKED!" : "The track escaped..."; }
   function spawnMole() { if (!active || !game) return; hideMoles(); const hole = [...game.board.children][Math.floor(Math.random() * game.board.children.length)]; if (!hole) return; hole.dataset.active = "true"; hole.textContent = "🐾"; clearTimeout(moleTimer); moleTimer = setTimeout(() => { if (!active || hole.dataset.active !== "true") return; hole.dataset.active = "false"; hole.textContent = "🕳️"; health = Math.max(0, health - 1); game.status.textContent = `Health: ${health}`; if (!health) finish(false); }, 1200); }
   function createGame() { if (game) return game; const panel = document.createElement("section"); panel.id = "whack-a-track-game"; panel.hidden = true; panel.innerHTML = `<h2>Whack-a-Track</h2><p id="wat-status"></p><div class="wat-board"></div>`; const board = $(".wat-board", panel), status = $("#wat-status", panel); for (let i = 0; i < 9; i++) { const hole = document.createElement("button"); hole.type = "button"; hole.className = "wat-hole"; hole.dataset.active = "false"; hole.textContent = "🕳️"; hole.addEventListener("click", () => { if (!active || hole.dataset.active !== "true") return; hole.dataset.active = "false"; hole.textContent = "✨"; health = Math.min(24, health + 1); status.textContent = `Health: ${health}`; }); board.appendChild(hole); } const parent = controls(); if (parent) parent.insertAdjacentElement("afterend", panel); else ($("main") || document.body).prepend(panel); game = { panel, board, status }; return game; }
+  function toggleGame(event) { event.preventDefault(); event.stopPropagation(); if (active || (game && !game.panel.hidden)) { closeGame(); return; } game = createGame(); syncGamePosition(); game.panel.hidden = false; health = 24; seconds = 80; active = true; game.status.textContent = `Health: ${health}`; clearInterval(gameTimer); gameTimer = setInterval(() => { if (--seconds <= 0) finish(true); else spawnMole(); }, 1000); spawnMole(); }
 
-  function toggleGame(event) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (active || (game && !game.panel.hidden)) {
-      closeGame();
-      return;
-    }
-
-    game = createGame();
-    game.panel.hidden = false;
-    health = 24;
-    seconds = 80;
-    active = true;
-    game.status.textContent = `Health: ${health}`;
-    clearInterval(gameTimer);
-    gameTimer = setInterval(() => {
-      if (--seconds <= 0) finish(true);
-      else spawnMole();
-    }, 1000);
-    spawnMole();
-  }
-
-  function init() {
-    addChrome();
-    addStyles();
-    paintSongs();
-    paintCards();
-    syncPlayerHeight();
-    window.addEventListener("resize", syncPlayerHeight);
-
-    const list = $("#song-list");
-    if (list) new MutationObserver(() => {
-      paintSongs();
-      paintCards();
-    }).observe(list, { childList: true, subtree: true });
-
-    $("#draw-cards")?.addEventListener("click", () => setTimeout(paintCards, 0));
-    $("#whack-track")?.addEventListener("click", toggleGame);
-  }
-
+  function init() { addChrome(); addStyles(); paintSongs(); paintCards(); syncPlayerHeight(); syncGamePosition(); window.addEventListener("resize", () => { syncPlayerHeight(); syncGamePosition(); }); window.addEventListener("scroll", syncGamePosition, { passive: true }); const list = $("#song-list"); if (list) new MutationObserver(() => { paintSongs(); paintCards(); }).observe(list, { childList: true, subtree: true }); $("#draw-cards")?.addEventListener("click", () => setTimeout(paintCards, 0)); $("#whack-track")?.addEventListener("click", toggleGame); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true }); else init();
 })();
