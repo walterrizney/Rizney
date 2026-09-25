@@ -41,6 +41,9 @@
   function addStyles() {
     if ($("#rizney-animal-styles")) return;
     const style = document.createElement("style"); style.id = "rizney-animal-styles"; style.textContent = `
+      .player-dock{z-index:101}
+      .controls{position:sticky;top:var(--rizney-player-height,0px);z-index:100}
+      #reading[hidden]{display:none!important}
       #song-list .song{grid-template-columns:38px minmax(0,1fr) 52px}
       #song-list .song .play{grid-column:3;grid-row:1;align-self:stretch;justify-self:end;width:52px;height:52px;min-height:52px;padding:3px;display:grid;place-items:center;overflow:hidden;background:#000;border:1px solid var(--gold);border-radius:8px}
       #song-list .song .play img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
@@ -48,9 +51,14 @@
       @media(max-width:500px){#song-list .song{grid-template-columns:30px minmax(0,1fr) 46px}#song-list .song .play{width:46px;height:46px;min-height:46px}}
     `; document.head.appendChild(style);
   }
+
+  function syncPlayerHeight() {
+    const dock = $(".player-dock");
+    if (dock) document.documentElement.style.setProperty("--rizney-player-height", `${dock.getBoundingClientRect().height}px`);
+  }
   function paintSongs(){document.querySelectorAll("#song-list .song").forEach((row,index)=>{const button=row.querySelector("button.play");if(!button||button.dataset.animalPainted==="true")return;const name=labelFor(animal(index));const image=document.createElement("img");image.src=imageFor(index);image.alt=`Play song ${index+1}: ${name}`;image.title=name;image.loading="lazy";button.replaceChildren(image);button.setAttribute("aria-label",image.alt);button.title=name;button.dataset.animalPainted="true"})}
   function paintCards(){const cards=$("#cards");if(!cards)return;cards.querySelectorAll(".card").forEach((card,position)=>{const link=card.querySelector("a"),match=link?.textContent.match(/Play song\s+(\d+)/i),index=match?Number(match[1])-1:Number(card.dataset.songIndex??position),name=labelFor(animal(index));card.querySelector("strong")?.remove();const symbol=card.querySelector(".symbol");if(symbol&&!symbol.querySelector("img")){const image=document.createElement("img");image.src=imageFor(index);image.alt=name;image.title=name;image.loading="lazy";symbol.replaceChildren(image)}let label=card.querySelector(".animal-name");if(!label&&link){label=document.createElement("span");label.className="animal-name";link.before(label)}if(label)label.textContent=name;card.dataset.songIndex=String(index)})}
-  function bindVisuals(){addHeaderAndFooter();addStyles();paintSongs();const list=$("#song-list");if(list)new MutationObserver(paintSongs).observe(list,{childList:true,subtree:true});const cardsButton=$("#draw-cards"),reading=$("#reading");if(cardsButton&&reading)cardsButton.addEventListener("click",()=>setTimeout(()=>{if(!reading.hidden)paintCards()},0),true)}
+  function bindVisuals(){addHeaderAndFooter();addStyles();paintSongs();syncPlayerHeight();window.addEventListener("resize",syncPlayerHeight);const list=$("#song-list");if(list)new MutationObserver(paintSongs).observe(list,{childList:true,subtree:true});const cardsButton=$("#draw-cards"),reading=$("#reading");if(cardsButton&&reading)cardsButton.addEventListener("click",()=>setTimeout(()=>{if(!reading.hidden)paintCards()},0),true)}
   let game=null,active=false,health=24,seconds=80,moleTimer,hideTimer,gameTimer;
   const setToolbarHidden=hidden=>controls()?.classList.toggle("toolbar-hidden",hidden);
   const isPlaying=()=>{const p=player();return Boolean(p&&window.YT?.PlayerState&&p.getPlayerState?.()===window.YT.PlayerState.PLAYING)};
