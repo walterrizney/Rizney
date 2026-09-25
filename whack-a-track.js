@@ -4,7 +4,7 @@
   const $ = (s, r = document) => r.querySelector(s);
   const controls = () => $(".controls");
   const player = () => window.rizneyPlayer || window.player || null;
-  const animals = ["aardvark","alligator","anglefish","ant","anteater","armadillo","baboon","badger","bald-eagle","bass","bat","bear","beaver","bee","blob-fish","blue-heron","boar","buffalo","butterfly","camel","cat","caterpillar","cow","crab","deer","dolphin","donkey","dragonfly","eagle","elephant","falcon","fish","flamingo","fox","frog","giraffe","goat","gorilla","hawk","hedgehog","hippo","horse","jaguar","kangaroo","koala","lemur","leopard","lion","llama","lynx","mole","monkey","moose","narwhal","otter","owl","panda","panther","parrot","peacock","penguin","pigeon","porcupine","rabbit","raccoon","ram","rat","raven","rhino","seal","shark","sheep","skunk","sloth","snake","sparrow","squirrel","stork","tiger","toucan","turtle","vulture","walrus","weasel","whale","wolf","yak","zebra"];
+  const animals = ["aardvark","alligator","anglefish","ant","anteater","armadillo","baboon","badger","bald-eagle","bass","bat","bear","beaver","bee","blob-fish","blue-heron","boar","buffalo","butterfly","camel","capybara","chameleon","cheetah","chihuahua","chimpanzee","chupacabra","clam","cow","coyote","crab","cricket","crocodile","crow","deer","dolphin","donkey","dove","duck","eagle","elephant","falcon","flamingo","fox","frog","gazelle","giraffe","goat","goldfish","gorilla","hamster","hawk","hedgehog","hippo","horse","hyena","jellyfish","kangaroo","kiwi","koala","lion","lizard","llama","lynx","manatee","mole","moose","mouse","narwhal","octopus (2)","otter","owl","panda","panther","parrot","peacock","penguin","pig","platypus","polar-bear","porcupine","puma","rabbit","raccoon","ram","rat","raven","red-panda","rhino","rooster","salmon","scorpion","seagull","seahorse","seal","shark","sloth","snail","snake","spider","squid","squirrel","swan","t-rex","tapir","toucan","unicorn","vulture","walrus","warthog","weasel","whale","wolf","wombat","woodpecker","yak","zebra"];
   const animal = i => animals[i % animals.length];
   const imageFor = i => `assets/animal-icons/${encodeURIComponent(animal(i))}.png`;
   const labelFor = name => name.replace(/\s*\(2\)$/, "").replace(/-/g, " ");
@@ -43,7 +43,14 @@
         .top-area .donate:hover,.top-area .context-link:hover{background:#55208a}
         .rizney-footer{margin:22px auto 0;padding:20px 0 34px;text-align:center;border-top:1px solid #3b1d50}
         .rizney-footer img{display:block;width:110px;height:auto;max-height:150px;object-fit:contain;margin:0 auto}
-        @media(max-width:500px){.top-area{min-height:78px!important;padding:12px 8px 14px!important}.top-area .donate,.top-area .context-link{top:14px!important}.top-area .donate{left:8px!important}.top-area .context-link{left:50%!important}.top-area .rizney-logo{width:66px;height:66px;top:4px;right:8px}.rizney-footer img{width:94px;max-height:130px}}
+        #cards .card .symbol{height:96px;display:grid;place-items:center;font-size:0}
+        #cards .card .symbol img{width:96px;height:96px;object-fit:contain;display:block}
+        #cards .card .animal-name{display:block;margin:0 0 8px;color:var(--bright-gold);font-family:sans-serif;font-size:.78rem;text-transform:capitalize}
+        #whack-a-track-game{max-width:min(92vw,620px);margin:8px auto 18px;padding:10px 14px 14px;text-align:center;background:#120b18;border:2px solid #d4af37;border-radius:12px}
+        #whack-a-track-game[hidden]{display:none!important}
+        .wat-board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:420px;margin:12px auto}
+        .wat-hole{min-height:76px;padding:8px;font-size:1.7rem;border:1px solid #d4af37;border-radius:8px;background:#000;color:#fff;cursor:pointer}
+        @media(max-width:500px){.top-area{min-height:78px!important;padding:12px 8px 14px!important}.top-area .donate,.top-area .context-link{top:14px!important}.top-area .donate{left:8px!important}.top-area .context-link{left:50%!important}.top-area .rizney-logo{width:66px;height:66px;top:4px;right:8px}.rizney-footer img{width:94px;max-height:130px}.wat-hole{min-height:62px}}
       `;
       document.head.appendChild(style);
     }
@@ -70,7 +77,7 @@
       .controls.toolbar-hidden{visibility:hidden;opacity:0;pointer-events:none}
       #reading[hidden]{display:none!important}
       #song-list .song{grid-template-columns:38px minmax(0,1fr) 52px}
-      #song-list .song .play{grid-column:3;grid-row:1;align-self:stretch;justify-self:end;width:52px;height:52px;min-height:52px;padding:3px;display:grid;place-items:center;overflow:hidden;backdrop-filter:blur(2px);background:transparent;border:none}
+      #song-list .song .play{grid-column:3;grid-row:1;align-self:stretch;justify-self:end;width:52px;height:52px;min-height:52px;padding:3px;display:grid;place-items:center;overflow:hidden;background:transparent;border:0;box-shadow:none}
       #song-list .song .play img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
       #cards .card{background:#000}
       #cards .card .symbol{height:96px;display:grid;place-items:center;font-size:0}
@@ -106,13 +113,26 @@
     if (!cards) return;
     cards.querySelectorAll(".card").forEach((card, position) => {
       const symbol = card.querySelector(".symbol");
-      if (!symbol || symbol.querySelector("img")) return;
-      const img = document.createElement("img");
-      img.src = imageFor(position);
-      img.alt = labelFor(animal(position));
-      img.loading = "lazy";
-      symbol.innerHTML = "";
-      symbol.appendChild(img);
+      const animalName = labelFor(animal(position));
+      if (symbol && !symbol.querySelector("img")) {
+        const img = document.createElement("img");
+        img.src = imageFor(position);
+        img.alt = animalName;
+        img.loading = "lazy";
+        symbol.innerHTML = "";
+        symbol.appendChild(img);
+      }
+      if (!card.querySelector(".animal-name")) {
+        const label = document.createElement("span");
+        label.className = "animal-name";
+        label.textContent = animalName;
+        const link = card.querySelector("a");
+        if (link) {
+          link.before(label);
+        } else {
+          card.appendChild(label);
+        }
+      }
     });
   }
 
