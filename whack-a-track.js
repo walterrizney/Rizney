@@ -56,8 +56,47 @@
   function finish(won) { active = false; clearTimeout(moleTimer); clearInterval(gameTimer); hideMoles(); if (game) game.status.textContent = won ? "💥 TRACK WHACKED!" : "The track escaped..."; }
   function spawnMole() { if (!active || !game) return; hideMoles(); const hole = [...game.board.children][Math.floor(Math.random() * game.board.children.length)]; if (!hole) return; hole.dataset.active = "true"; hole.textContent = "🐾"; clearTimeout(moleTimer); moleTimer = setTimeout(() => { if (!active || hole.dataset.active !== "true") return; hole.dataset.active = "false"; hole.textContent = "🕳️"; health = Math.max(0, health - 1); game.status.textContent = `Health: ${health}`; if (!health) finish(false); }, 1200); }
   function createGame() { if (game) return game; const panel = document.createElement("section"); panel.id = "whack-a-track-game"; panel.hidden = true; panel.innerHTML = `<h2>Whack-a-Track</h2><p id="wat-status"></p><div class="wat-board"></div>`; const board = $(".wat-board", panel), status = $("#wat-status", panel); for (let i = 0; i < 9; i++) { const hole = document.createElement("button"); hole.type = "button"; hole.className = "wat-hole"; hole.dataset.active = "false"; hole.textContent = "🕳️"; hole.addEventListener("click", () => { if (!active || hole.dataset.active !== "true") return; hole.dataset.active = "false"; hole.textContent = "✨"; health = Math.min(24, health + 1); status.textContent = `Health: ${health}`; }); board.appendChild(hole); } const parent = controls(); if (parent) parent.insertAdjacentElement("afterend", panel); else ($("main") || document.body).prepend(panel); game = { panel, board, status }; return game; }
-  function toggleGame(event) { event.preventDefault(); event.stopPropagation(); if (active || (game && !game.panel.hidden)) { closeGame(); return; } game = createGame(); game.panel.hidden = false; health = 24; seconds = 80; active = true; game.status.textContent = `Health: ${health}`; clearInterval(gameTimer); gameTimer = setInterval(() => { if (--seconds <= 0) finish(true); else spawnMole(); }, 1000); spawnMole(); }
 
-  function init() { addChrome(); addStyles(); paintSongs(); paintCards(); syncPlayerHeight(); window.addEventListener("resize", syncPlayerHeight); const list = $("#song-list"); if (list) new MutationObserver(() => { paintSongs(); paintCards(); }).observe(list, { childList: true, subtree: true }); $("#draw-cards")?.addEventListener("click", () => setTimeout(paintCards, 0)); $("#whack-track")?.addEventListener("click", toggleGame); }
+  function toggleGame(event) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (active || (game && !game.panel.hidden)) {
+      closeGame();
+      return;
+    }
+
+    game = createGame();
+    game.panel.hidden = false;
+    health = 24;
+    seconds = 80;
+    active = true;
+    game.status.textContent = `Health: ${health}`;
+    clearInterval(gameTimer);
+    gameTimer = setInterval(() => {
+      if (--seconds <= 0) finish(true);
+      else spawnMole();
+    }, 1000);
+    spawnMole();
+  }
+
+  function init() {
+    addChrome();
+    addStyles();
+    paintSongs();
+    paintCards();
+    syncPlayerHeight();
+    window.addEventListener("resize", syncPlayerHeight);
+
+    const list = $("#song-list");
+    if (list) new MutationObserver(() => {
+      paintSongs();
+      paintCards();
+    }).observe(list, { childList: true, subtree: true });
+
+    $("#draw-cards")?.addEventListener("click", () => setTimeout(paintCards, 0));
+    $("#whack-track")?.addEventListener("click", toggleGame);
+  }
+
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true }); else init();
 })();
